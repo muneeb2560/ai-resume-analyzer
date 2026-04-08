@@ -1,7 +1,7 @@
 import os
 import streamlit as st
 from dotenv import load_dotenv
-import google.generativeai as genai
+from openai import OpenAI
 import pdfplumber
 from pdf2image import convert_from_path
 import pytesseract
@@ -17,13 +17,18 @@ class AIResumeAnalyzer:
         # Load environment variables
         load_dotenv()
         
-        # Configure Google Gemini AI
-        self.google_api_key = os.getenv("GOOGLE_API_KEY")
+                # Configure Hugging Face API via OpenAI client
+        self.hf_token = os.getenv("HF_TOKEN")
         self.openrouter_api_key = os.getenv("OPENROUTER_API_KEY")
         
-        if self.google_api_key:
-            genai.configure(api_key=self.google_api_key)
-    
+        if self.hf_token:
+            self.client = OpenAI(
+                base_url="https://router.huggingface.co/v1",
+                api_key=self.hf_token,
+            )
+        else:
+            self.client = None
+
     def extract_text_from_pdf(self, pdf_file):
         """Extract text from PDF using pdfplumber and OCR if needed"""
         text = ""
@@ -186,11 +191,10 @@ class AIResumeAnalyzer:
         if not resume_text:
             return {"error": "Resume text is required for analysis."}
         
-        if not self.google_api_key:
-            return {"error": "Google API key is not configured. Please add it to your .env file."}
+        if not self.client:
+            return {"error": "HF_TOKEN is not configured. Please add it to your .env file."}
         
         try:
-            model = genai.GenerativeModel("gemini-2.5-flash")
             
             base_prompt = f"""
             You are an expert resume analyst with deep knowledge of industry standards, job requirements, and hiring practices across various fields. Your task is to provide a comprehensive, detailed analysis of the resume provided.
@@ -257,8 +261,13 @@ class AIResumeAnalyzer:
                 [List specific requirements from the job description that are not addressed in the resume, with recommendations on how to address each gap]
                 """
             
-            response = model.generate_content(base_prompt)
-            analysis = response.text.strip()
+            completion = self.client.chat.completions.create(
+                model="google/gemma-3-27b-it",
+                messages=[
+                    {"role": "user", "content": base_prompt}
+                ],
+            )
+            analysis = completion.choices[0].message.content.strip()
             
             # Extract resume score if present
             resume_score = self._extract_score_from_text(analysis)
