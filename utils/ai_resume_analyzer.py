@@ -62,17 +62,17 @@ class AIResumeAnalyzer:
                         except Exception as e:
                             # Don't show these specific errors to the user
                             if "PDFColorSpace" not in str(e) and "Cannot convert" not in str(e):
-                                st.warning(f"Error extracting text from page with pdfplumber: {e}")
+                                print(f"Error extracting text from page with pdfplumber: {e}")
             except Exception as e:
-                st.warning(f"pdfplumber extraction failed: {e}")
+                print(f"pdfplumber extraction failed: {e}")
             
             # If pdfplumber extraction worked, return the text
             if text.strip():
                 os.unlink(temp_path)  # Clean up the temp file
                 return text.strip()
             
-            # Try PyPDF2 as a fallback
-            st.info("Trying PyPDF2 extraction method...")
+            # Try pypdf as a fallback
+            print("Trying pypdf extraction method...")
             try:
                 import pypdf
                 pdf_text = ""
@@ -87,7 +87,7 @@ class AIResumeAnalyzer:
                     os.unlink(temp_path)  # Clean up the temp file
                     return pdf_text.strip()
             except Exception as e:
-                st.warning(f"PyPDF2 extraction failed: {e}")
+                print(f"pypdf extraction failed: {e}")
             
             # If we got here, both extraction methods failed
             st.warning("Standard text extraction methods failed. Your PDF might be image-based or scanned.")
